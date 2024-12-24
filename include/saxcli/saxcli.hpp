@@ -28,151 +28,167 @@
  */
 #pragma once
 
-#include <bitset>
+#include <array>
+#include <cstddef>
 #include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
 #include <string_view>
-#include <vector>
-#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <span>
+
+#include <tl/expected.hpp>
 
 namespace saxcli {
 
+namespace intern {
 
-class option;
-class sub_command;
-class options_handler;
-struct options_format;
+// non-copyable class for convenience
+class non_copyable{
+public:
+  non_copyable() = default;  
+private:
+  non_copyable(const non_copyable&) = delete;
+  non_copyable(non_copyable&&) = delete;
+  non_copyable& operator=(const non_copyable&) = delete;
+  non_copyable& operator=(non_copyable&&) = delete;
 
-///
-/// \brief generic error for error parsing
-///
-class parse_options_error : public std::runtime_error {
-  public:
-    explicit inline parse_options_error(const std::string& msg) : std::runtime_error(msg) {}
-    explicit inline parse_options_error(const std::string& msg, std::vector<std::string> subcmd)
-        : std::runtime_error(msg), _subcmds(subcmd) {}
+};
 
-
-    inline const std::vector<std::string>& subcommand_stack() const { return _subcmds; }
-
-
-  private:
-    std::vector<std::string> _subcmds;
+enum class parsing_code{
+  valid = 0x00,
+  invalid_type = 0x01
 };
 
 
-///
-/// \brief parameter subcommand
-///
-class options_handler {
-  public:
-    enum class flag { only_subcmd = 0, no_help = 1 };
-
-    // help format
-    struct help_format {
-        help_format() : margin(2), padding(2) {}
-        std::size_t margin;
-        std::size_t padding;
-    };
-
-    options_handler(std::string name, std::string help_msg);
-
-    options_handler(const options_handler&) = default;
-    options_handler(options_handler&&) = default;
-
-    options_handler& operator=(const options_handler&) = default;
-    options_handler& operator=(options_handler&&) = default;
-
-    /// add an option to the option handler
-    void add_option(option opt);
-
-    /// add a subcommand with its own set of options to the handler
-    void add_subcommand(sub_command sub_com);
-
-    /// add a positional argument handler
-    void set_positional_argument_handler(std::function<void(const std::string&)> handler);
-
-    /// set a flag
-    void set_flags(flag f, bool v);
-
-    bool get_flag(flag f) const;
+inline void call_if_valid(const std::function<void (std::string_view)> & callback, std::string_view sv){
+  if(callback){
+    callback(sv);
+  }
+}
 
 
-    const std::vector<sub_command>& sub_commands() const;
+} // intern
 
-    const std::vector<option>& options() const;
+namespace backport{
+  template<typename T, typename E>
+  using expected = tl::expected<T, E>;
+
+} // backport
 
 
-    std::string help(const help_format& fmt = help_format()) const;
+// concepts
+template<typename T>
+concept SVCallableConcept = requires(T t, std::string_view sv) {
+    { t(sv) } -> std::convertible_to<void>;
+};
 
-    std::string_view name() const;
-
-    std::string_view help_message() const;
-
-    // internal use
-    void _call_positional(std::string arg) const;
-
-  private:
-    std::bitset<32> _flags;
-    std::string _name, _help_msg;
-    std::vector<option> _opts;
-    std::vector<sub_command> _subcmd;
-    std::function<void(const std::string&)> _positional_argument;
+/// @brief errcode 
+enum class errcode{
+  unknown = 0x00,
+  invalid_progname = 0x01,
 };
 
 
-///
-/// \brief parameter subcommand
-///
-class sub_command : public options_handler {
-  public:
-    sub_command(std::string subcommand_name, std::function<void(void)> callback, std::string help_msg);
+// succesful argument parsing
+struct success{};
+// error during parsing
+struct error{
+  errcode code;
+  std::string message;
+};
 
-    // internal
-    void _call() const;
+using result = backport::expected<success, error>;
 
-  private:
-    std::function<void(void)> _action;
+
+class option_handler : private intern::non_copyable{
+public:
+  template<SVCallableConcept Callable>
+  inline option_handler(std::string_view name, const Callable & callback, std::string_view description) : name_(name), 
+  
+  callback_([&callback](std::string_view sv) -> intern::parsing_code{
+    callback(sv);
+    return intern::parsing_code::valid;
+  }), description_(description){}
+
+private:  
+  std::string_view name_;
+  std::function<intern::parsing_code (std::string_view sv)> callback_;
+  std::string_view description_;
+};
+
+struct subcommand_handler{};
+
+struct positional_handler{};
+
+
+class args_handler: public intern::non_copyable{
+public:
+  inline args_handler(){}
+  args_handler(const args_handler&) = delete;
+  args_handler(args_handler&&) = delete;
+
+  constexpr void options(std::initializer_list<option_handler> list_options){
+    options_ = std::span<const option_handler>(list_options.begin(), list_options.end());
+  }
+
+  template<SVCallableConcept Callable> 
+  constexpr void prog_name(const Callable & cb){
+    prog_name_ = cb;
+  }
+
+private:
+  std::string_view desc_;
+  std::function<void (std::string_view)> prog_name_;
+  std::span<const option_handler> options_;
+  std::span<const positional_handler> positionals_;
+  std::span<const subcommand_handler> subcommands_;
+
+  friend result parse_args(const args_handler & args, int argc,
+                              char **argv);
+
 };
 
 
-///
-/// \brief a given option
-///
-class option {
-  public:
-    option(std::string option_name, std::function<void(const std::string&)> callback, std::string help_msg);
-    option(std::string option_name, std::function<void(int)> callback, std::string help_msg);
-    option(std::string option_name, std::function<void(void)> callback, std::string help_msg);
+// CLI argument parser
+result parse_args(const args_handler & args, int argc,
+                              char **argv){
 
-    std::string_view name() const;
+  if (argc < 1 || std::string_view(argv[0]).size() == 0) {
+    return tl::unexpected(error{
+        .code = errcode::invalid_progname,
+        .message = "argc shall be >= 1"});
+  }
 
-    std::vector<std::string_view> name_and_aliases() const;
+  if(args.prog_name_){
+    args.prog_name_(std::string_view(argv[0]));
+  }
 
-    void add_alias(std::string alias);
-
-    bool match(std::string_view opt) const;
-
-    std::string_view help_message() const;
+  bool end_of_options = false;
+  for(int i = 1; i < argc; ++i){
+    const std::string_view current_arg(argv[i]);
 
 
-    // internal
-    void _call(std::string_view value) const;
+    if(current_arg == "--"){
+      end_of_options = true;
+      continue;
+    }
 
-    bool _get_flag(int v) const;
-
-  private:
-    std::vector<std::string> _names;
-    std::string _help_msg;
-
-    std::function<void(const std::string&)> _action;
-    std::bitset<32> _flags;
-};
-
+    if(end_of_options == false){
+      // lets check long args
+      if(current_arg.size() >= 3 && current_arg[0] == '-'){
+        std::size_t number_of_dash = 1;
+        // todo
+      }
+    }
 
 
 
-void parse_options(const options_handler& opt_handler, int argc, char** argv);
-
-void parse_options(const options_handler& opt_handler, std::string_view prog_name, const std::vector<std::string_view>& options);
+  }
+  
+  return success{};
+}
 
 } // namespace saxcli

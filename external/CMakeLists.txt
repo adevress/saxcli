@@ -34,3 +34,23 @@ FetchContent_MakeAvailable(fmt)
 
 
 endif()
+
+##
+## TL expected
+##
+if(NOT TARGET expected)
+
+set(EXPECTED_BUILD_TESTS FALSE FORCE)
+set(EXPECTED_BUILD_PACKAGE_DEB FALSE FORCE)
+
+FetchContent_Declare(
+  expected
+  GIT_REPOSITORY https://github.com/TartanLlama/expected.git
+  GIT_TAG v1.1.0
+)
+
+FetchContent_MakeAvailable(expected)
+
+endif()
+
+

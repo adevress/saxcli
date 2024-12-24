@@ -24,7 +24,7 @@ add_library(saxcli_lib
 )
 
 target_include_directories(saxcli_lib PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(saxcli_lib PUBLIC fmt::fmt)
+target_link_libraries(saxcli_lib PUBLIC fmt::fmt expected function-ref)
 target_compile_definitions(saxcli_lib PRIVATE DOCTEST_CONFIG_DISABLE)
 
 add_executable(test_saxcli
@@ -32,7 +32,7 @@ add_executable(test_saxcli
     ${sax_cli_headers}
     "tests/doctest_main.cpp"
 )
-target_link_libraries(test_saxcli PUBLIC doctest fmt::fmt)
+target_link_libraries(test_saxcli PUBLIC doctest expected fmt::fmt)
 target_include_directories(test_saxcli PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_test(NAME test_saxcli COMMAND test_saxcli)

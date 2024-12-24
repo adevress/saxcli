@@ -4,4 +4,5 @@ tasks:
   format:
     cmds:
       - find src/ -name '*.[ch]pp' -exec clang-format -i {} \;
+      - find include/ -name '*.[ch]pp' -exec clang-format -i {} \;
     silent: true
