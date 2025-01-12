@@ -28,54 +28,29 @@
  */
 #pragma once
 
-#include <bitset>
-#include <functional>
-#include <string_view>
-#include <vector>
-#include <stdexcept>
-
-
-#include "intern/saxcli_impl.hpp"
+#include <cstdint>
 
 namespace saxcli {
 
+namespace intern {
 
-/// @brief Representation of a compile time string 
-/// compatible as a C++20 template parameter 
-/// @tparam N size of the literal (including null term)
-template<size_t N>
-struct StringLiteral {
-    /// @brief Construct a StringLiteral from given static text
-    /// @param str static text to use
-    constexpr StringLiteral(const char (&str)[N]) {
-        std::copy_n(str, N, value_);
-    }
-    
-    /// @brief internal buffer
-    char value_[N];
+/// @brief Visitor to count the number of option on the current command or subcommand. This Visitor is constexpr compatiple
+struct OptionHandlerCounter{
 
-    constexpr std::string_view view() const{
-        return std::string_view(value_, N-1);
+    constexpr void visit(const auto & value){
+        total +=1;
     }
+
+    std::size_t total = 0;
 };
 
+template<typename OptHandler>
+constexpr std::size_t number_of_options(OptHandler & handler){
 
+    OptionHandlerCounter counter;
+    handler.introspect(counter);
+    return counter.total;
+}
 
-template<typename OptionType, StringLiteral Name, StringLiteral Alias = StringLiteral("")>
-struct Option{
-    static constexpr StringLiteral name = Name;
-    static constexpr StringLiteral alias = Alias;
-
-    constexpr Option(const OptionType & default_value = OptionType()) : value_(default_value){}
-
-
-    constexpr OptionType value() const{
-        return value_;
-    }
-
-    OptionType value_;
-};
-
-
-
+} // namespace intern
 } // namespace saxcli

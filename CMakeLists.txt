@@ -24,7 +24,7 @@ add_library(saxcli_lib
 )
 
 target_include_directories(saxcli_lib PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(saxcli_lib PUBLIC fmt::fmt)
+target_link_libraries(saxcli_lib PUBLIC fmt::fmt doctest)
 target_compile_definitions(saxcli_lib PRIVATE DOCTEST_CONFIG_DISABLE)
 
 add_executable(test_saxcli
