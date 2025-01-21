@@ -33,7 +33,7 @@
 #include <string_view>
 #include <vector>
 #include <stdexcept>
-
+#include <optional>
 
 #include "intern/saxcli_impl.hpp"
 
@@ -60,22 +60,54 @@ struct StringLiteral {
 };
 
 
-
-template<typename OptionType, StringLiteral Name, StringLiteral Alias = StringLiteral("")>
+/// @brief Option type to use within an CLI option handler struct
+/// An Option represent a given CLI option parameter. For instance using 'Option<bool, "verbose">' within the option handler
+/// will create an option '--verbose' to the CLI associated with it. The struct member value() will be set to true if the option is present
+/// @tparam OptionType 
+/// @tparam Name 
+/// @tparam Description 
+template<typename OptionType, StringLiteral Name, StringLiteral Description = StringLiteral("undocumented")>
 struct Option{
-    static constexpr StringLiteral name = Name;
-    static constexpr StringLiteral alias = Alias;
-
     constexpr Option(const OptionType & default_value = OptionType()) : value_(default_value){}
 
+    static_assert(std::is_same_v<OptionType, std::string_view> || std::is_same_v<OptionType, bool>, "Valid option types are 'bool' or 'std::string_view'");
 
     constexpr OptionType value() const{
         return value_;
     }
 
+    static constexpr std::string_view name(){
+        return Name;
+    }
+
+    static constexpr std::string_view description(){
+        return Description;
+    }    
+
     OptionType value_;
+
+    using is_option_type_= intern::option_type_tag;
 };
 
+
+enum class ParsingErrCode : std::uint8_t{
+    invalidOption = 0x01,
+    invalidOptionValue = 0x02,
+    invalidSubCommand = 0x10,
+    corruptedArgv = 0xf0,
+};
+
+
+struct ParsingError{
+    ParsingErrCode code;
+    std::string message;
+};
+
+
+template<typename ArgumentsHandler>
+std::optional<ParsingError> parse_arguments(ArgumentsHandler & handler, int argc, char** argv){
+
+}
 
 
 } // namespace saxcli

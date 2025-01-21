@@ -49,10 +49,10 @@ struct OptHandlerSimple {
   }
 
   // a boolean option "space"
-  Option<bool, "space"> space;
+  Option<bool, "space", "Into space or not"> space;
 
   // a string view option with a prefix "name"
-  Option<std::string_view, "name", "n"> name;
+  Option<std::string_view, "name", "name of the person"> name;
 };
 
 struct args_container {
