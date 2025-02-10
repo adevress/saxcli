@@ -31,16 +31,16 @@
 #include <numeric>
 #include <span>
 
-#include <saxcli/saxcli.hpp>
+#include <reflecli/reflecli.hpp>
 
 #include <doctest/doctest.h>
 
-namespace saxcli {
+namespace reflecli {
 
 namespace tests {
 
 // example of option handler
-struct OptHandlerSimple {
+struct ArgHandlerSimple {
 
   // declare the introspect function
   template <typename Visitor> constexpr void introspect(Visitor &v) {
@@ -77,9 +77,9 @@ args_container make_argc_argv(std::initializer_list<const char *> arguments) {
 
 TEST_CASE("option count") {
 
-  OptHandlerSimple test;
+  ArgHandlerSimple test;
 
-  constexpr auto n_opts = intern::number_of_options(test);
+  constexpr auto n_opts = intern::number_of_options<ArgHandlerSimple>();
 
   CHECK(n_opts == 2);
 }
@@ -93,7 +93,7 @@ TEST_CASE("string lit") {
 
   const char *ref_str = "hello world";
 
-  constexpr auto value = saxcli::StringLiteral{"hello world"};
+  constexpr auto value = reflecli::StringLiteral{"hello world"};
 
   CHECK(value.view().size() == std::string_view(ref_str).size());
   CHECK(value.view() == std::string(ref_str));
@@ -101,4 +101,4 @@ TEST_CASE("string lit") {
 
 } // namespace tests
 
-} // namespace saxcli
+} // namespace reflecli

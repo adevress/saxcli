@@ -28,35 +28,24 @@
  */
 #pragma once
 
-#include <cstdint>
+#include <algorithm>
 
-#include "concepts.hpp"
+namespace reflecli {
 
-namespace saxcli {
 
-namespace intern {
-
-//  Visitor to count the number of option on the current command or subcommand. This Visitor is constexpr compatiple
-struct OptionCounterHandler{
-
-    constexpr void visit(const intern::OptionCompatible auto & value){
-        total +=1;
-    }
-
-    std::size_t total = 0;
+enum class ParsingErrCode : std::uint8_t{
+    invalidOption = 0x01,
+    invalidOptionValue = 0x02,
+    invalidSubCommand = 0x10,
+    corruptedArgv = 0xf0,
 };
 
-/// @brief Return the number of option associated with an handler. constexpr
-/// @tparam OptHandler 
-/// @param handler 
-/// @return number of options 
-template<typename OptHandler>
-constexpr std::size_t number_of_options(OptHandler & handler){
 
-    OptionCounterHandler counter;
-    handler.introspect(counter);
-    return counter.total;
-}
+struct ParsingError{
+    ParsingErrCode code;
+    std::string message;
+};
 
-} // namespace intern
-} // namespace saxcli
+
+
+} // namespace reflecli

@@ -35,9 +35,10 @@
 #include <stdexcept>
 #include <optional>
 
-#include "intern/saxcli_impl.hpp"
+#include "reflecli_errors.hpp"
+#include "intern/reflecli_impl.hpp"
 
-namespace saxcli {
+namespace reflecli {
 
 
 /// @brief Representation of a compile time string 
@@ -90,24 +91,10 @@ struct Option{
 };
 
 
-enum class ParsingErrCode : std::uint8_t{
-    invalidOption = 0x01,
-    invalidOptionValue = 0x02,
-    invalidSubCommand = 0x10,
-    corruptedArgv = 0xf0,
-};
-
-
-struct ParsingError{
-    ParsingErrCode code;
-    std::string message;
-};
-
-
 template<typename ArgumentsHandler>
 std::optional<ParsingError> parse_arguments(ArgumentsHandler & handler, int argc, char** argv){
-
+  return intern::recursive_handler_parsing(handler, argc, argv);
 }
 
 
-} // namespace saxcli
+} // namespace reflecli
